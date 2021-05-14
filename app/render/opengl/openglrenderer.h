@@ -87,6 +87,8 @@ private:
 
   void PrepareInputTexture(GLenum target, Texture::Interpolation interp);
 
+  void ClearDestinationInternal(double r = 0.0, double g = 0.0, double b = 0.0, double a = 0.0);
+
   GLuint GetCachedTexture(int width, int height, int depth, VideoParams::Format format, int channel_count);
 
   QTimer cache_timer_;

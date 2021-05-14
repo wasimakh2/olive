@@ -51,7 +51,8 @@ ViewerDisplayWidget::ViewerDisplayWidget(QWidget *parent) :
   show_fps_(false),
   frames_skipped_(0),
   show_widget_background_(false),
-  texture_equal_to_frame_(false)
+  load_texture_(nullptr),
+  push_mode_(kPushNull)
 {
   connect(Core::instance(), &Core::ToolChanged, this, &ViewerDisplayWidget::UpdateCursor);
 
@@ -105,7 +106,25 @@ void ViewerDisplayWidget::SetImage(FramePtr in_buffer)
   if (last_loaded_buffer_ != in_buffer) {
     last_loaded_buffer_ = in_buffer;
 
-    texture_equal_to_frame_ = false;
+    if (last_loaded_buffer_) {
+      push_mode_ = kPushFrame;
+    } else {
+      push_mode_ = kPushNull;
+    }
+  }
+
+  update();
+}
+
+void ViewerDisplayWidget::SetTexture(TexturePtr texture)
+{
+  load_texture_ = texture;
+  last_loaded_buffer_ = nullptr;
+
+  if (load_texture_) {
+    push_mode_ = kPushTexture;
+  } else {
+    push_mode_ = kPushNull;
   }
 
   update();
@@ -321,17 +340,23 @@ void ViewerDisplayWidget::OnPaint()
   renderer()->ClearDestination(bg_color.redF(), bg_color.greenF(), bg_color.blueF());
 
   // We only draw if we have a pipeline
-  if (last_loaded_buffer_ && color_service()) {
-    if (!texture_
-        || texture_->width() != last_loaded_buffer_->width()
-        || texture_->height() != last_loaded_buffer_->height()
-        || texture_->format() != last_loaded_buffer_->format()
-        || texture_->channel_count() != last_loaded_buffer_->channel_count()) {
-      texture_ = renderer()->CreateTexture(last_loaded_buffer_->video_params(), last_loaded_buffer_->data(), last_loaded_buffer_->linesize_pixels());
-    } else if (!texture_equal_to_frame_) {
-      texture_->Upload(last_loaded_buffer_->data(), last_loaded_buffer_->linesize_pixels());
+  if (push_mode_ != kPushNull && color_service()) {
+    if (push_mode_ == kPushTexture) {
+      texture_ = load_texture_;
+      load_texture_ = nullptr;
+    } else if (push_mode_ == kPushFrame) {
+      if (!texture_
+          || texture_->width() != last_loaded_buffer_->width()
+          || texture_->height() != last_loaded_buffer_->height()
+          || texture_->format() != last_loaded_buffer_->format()
+          || texture_->channel_count() != last_loaded_buffer_->channel_count()) {
+        texture_ = renderer()->CreateTexture(last_loaded_buffer_->video_params(), last_loaded_buffer_->data(), last_loaded_buffer_->linesize_pixels());
+      } else {
+        texture_->Upload(last_loaded_buffer_->data(), last_loaded_buffer_->linesize_pixels());
+      }
     }
-    texture_equal_to_frame_ = true;
+
+    push_mode_ = kPushUnnecessary;
 
     TexturePtr texture_to_draw = texture_;
 
@@ -458,6 +483,11 @@ void ViewerDisplayWidget::OnDestroy()
 
   texture_ = nullptr;
   deinterlace_texture_ = nullptr;
+  if (last_loaded_buffer_) {
+    push_mode_ = kPushFrame;
+  } else {
+    push_mode_ = kPushNull;
+  }
 }
 
 QPointF ViewerDisplayWidget::GetTexturePosition(const QPoint &screen_pos)

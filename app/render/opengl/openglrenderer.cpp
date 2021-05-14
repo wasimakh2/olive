@@ -76,6 +76,8 @@ private:
 
 #define PRINT_GL_ERRORS ErrorPrinter __e(__FUNCTION__, functions_)
 
+QMutex global_opengl_mutex;
+
 OpenGLRenderer::OpenGLRenderer(QObject* parent) :
   Renderer(parent),
   cache_timer_(this),
@@ -103,6 +105,8 @@ void OpenGLRenderer::Init(QOpenGLContext *existing_ctx)
 
 bool OpenGLRenderer::Init()
 {
+  QMutexLocker locker(&global_opengl_mutex);
+
   if (context_) {
     qCritical() << "Can't initialize already initialized OpenGLRenderer";
     return false;
@@ -111,6 +115,7 @@ bool OpenGLRenderer::Init()
   surface_.create();
 
   context_ = new QOpenGLContext(this);
+  context_->setShareContext(QOpenGLContext::globalShareContext());
   if (!context_->create()) {
     qCritical() << "Failed to create OpenGL context";
     return false;
@@ -131,6 +136,8 @@ void OpenGLRenderer::PostDestroy()
 
 void OpenGLRenderer::PostInit()
 {
+  QMutexLocker locker(&global_opengl_mutex);
+
   // Make context current on that surface
   if (context_->parent() == this && !context_->makeCurrent(&surface_)) {
     qCritical() << "Failed to makeCurrent() on offscreen surface in thread" << thread();
@@ -151,6 +158,8 @@ void OpenGLRenderer::PostInit()
 void OpenGLRenderer::DestroyInternal()
 {
   if (context_) {
+    QMutexLocker locker(&global_opengl_mutex);
+
     // Delete framebuffer
     functions_->glDeleteFramebuffers(1, &framebuffer_);
 
@@ -171,12 +180,15 @@ void OpenGLRenderer::DestroyInternal()
 
 void OpenGLRenderer::ClearDestination(double r, double g, double b, double a)
 {
-  functions_->glClearColor(r, g, b, a);
-  functions_->glClear(GL_COLOR_BUFFER_BIT);
+  QMutexLocker locker(&global_opengl_mutex);
+
+  ClearDestinationInternal(r, g, b, a);
 }
 
 QVariant OpenGLRenderer::CreateNativeTexture2D(int width, int height, VideoParams::Format format, int channel_count, const void *data, int linesize)
 {
+  QMutexLocker locker(&global_opengl_mutex);
+
   GLuint texture = GetCachedTexture(width, height, 1, format, channel_count);
 
   // If no texture in cache, generate new texture
@@ -218,6 +230,8 @@ QVariant OpenGLRenderer::CreateNativeTexture2D(int width, int height, VideoParam
 
 QVariant OpenGLRenderer::CreateNativeTexture3D(int width, int height, int depth, VideoParams::Format format, int channel_count, const void *data, int linesize)
 {
+  QMutexLocker locker(&global_opengl_mutex);
+
   GLuint texture = GetCachedTexture(width, height, depth, format, channel_count);
 
   // If no texture in cache, generate new texture
@@ -285,6 +299,8 @@ void OpenGLRenderer::DestroyNativeTexture(QVariant texture)
 
 QVariant OpenGLRenderer::CreateNativeShader(ShaderCode code)
 {
+  QMutexLocker locker(&global_opengl_mutex);
+
   PRINT_GL_ERRORS;
 
   QOpenGLShaderProgram* program = new QOpenGLShaderProgram(context_);
@@ -331,11 +347,15 @@ error:
 
 void OpenGLRenderer::DestroyNativeShader(QVariant shader)
 {
+  QMutexLocker locker(&global_opengl_mutex);
+
   delete Node::ValueToPtr<QOpenGLShaderProgram>(shader);
 }
 
 void OpenGLRenderer::UploadToTexture(Texture *texture, const void *data, int linesize)
 {
+  QMutexLocker locker(&global_opengl_mutex);
+
   PRINT_GL_ERRORS;
 
   GLuint t = texture->id().value<GLuint>();
@@ -371,6 +391,8 @@ void OpenGLRenderer::UploadToTexture(Texture *texture, const void *data, int lin
 
 void OpenGLRenderer::DownloadFromTexture(Texture* texture, void *data, int linesize)
 {
+  QMutexLocker locker(&global_opengl_mutex);
+
   const VideoParams& p = texture->params();
 
   GLint current_tex;
@@ -405,6 +427,8 @@ struct TextureToBind {
 
 void OpenGLRenderer::Blit(QVariant s, ShaderJob job, Texture *destination, VideoParams destination_params, bool clear_destination)
 {
+  QMutexLocker locker(&global_opengl_mutex);
+
   // If this node is iterative, we'll pick up which input here
   QString iterative_name;
   GLuint iterative_input = 0;
@@ -604,7 +628,7 @@ void OpenGLRenderer::Blit(QVariant s, ShaderJob job, Texture *destination, Video
 
       // Clear the destination if the caller requested it
       if (clear_destination) {
-        ClearDestination();
+        ClearDestinationInternal();
       }
     } else {
       // Always draw to output_tex, which gets swapped with input_tex every iteration
@@ -769,6 +793,12 @@ void OpenGLRenderer::PrepareInputTexture(GLenum target, Texture::Interpolation i
   functions_->glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 }
 
+void OpenGLRenderer::ClearDestinationInternal(double r, double g, double b, double a)
+{
+  functions_->glClearColor(r, g, b, a);
+  functions_->glClear(GL_COLOR_BUFFER_BIT);
+}
+
 GLuint OpenGLRenderer::GetCachedTexture(int width, int height, int depth, VideoParams::Format format, int channel_count)
 {
   TextureCacheKey input_key = {width, height, depth, format, channel_count};
@@ -793,6 +823,7 @@ void OpenGLRenderer::GarbageCollectTextureCache()
   qint64 max_age = QDateTime::currentMSecsSinceEpoch() - kTextureCacheMaxSize;
   for (auto it=texture_cache_.begin(); it!=texture_cache_.end(); ) {
     if (it->age < max_age) {
+      QMutexLocker locker(&global_opengl_mutex);
       GLuint t = it->texture;
       texture_params_.remove(t);
       functions_->glDeleteTextures(1, &t);

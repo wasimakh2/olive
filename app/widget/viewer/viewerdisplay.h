@@ -134,6 +134,8 @@ public slots:
    */
   void SetImage(FramePtr in_buffer);
 
+  void SetTexture(TexturePtr texture);
+
   /**
    * @brief Changes the pointer type if the tool is changed to the hand tool. Otherwise resets the pointer to it's
    * normal type.
@@ -304,7 +306,26 @@ private:
 
   bool show_widget_background_;
 
-  bool texture_equal_to_frame_;
+  TexturePtr load_texture_;
+
+  enum PushMode {
+    /// Push frame from CPU
+    kPushFrame,
+
+    /// Push texture that already exists on GPU
+    kPushTexture,
+
+    /// Texture is already up to date
+    kPushUnnecessary,
+
+    /// Push black screen
+    kPushBlank,
+
+    /// Push nothing
+    kPushNull,
+  };
+
+  PushMode push_mode_;
 
 private slots:
   void EmitColorAtCursor(QMouseEvent* e);

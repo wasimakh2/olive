@@ -172,6 +172,8 @@ int main(int argc, char *argv[])
   // Enable application automatically using higher resolution images from icons
   QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
 
+  QCoreApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+
   // Create application instance
   std::unique_ptr<QCoreApplication> a;
 

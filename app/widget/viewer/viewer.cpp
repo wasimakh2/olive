@@ -886,8 +886,6 @@ void ViewerWidget::RendererGeneratedFrame()
   RenderTicketWatcher* ticket = static_cast<RenderTicketWatcher*>(sender());
 
   if (ticket->HasResult()) {
-    FramePtr frame = ticket->Get().value<FramePtr>();
-
     if (nonqueue_watchers_.contains(ticket)) {
       while (!nonqueue_watchers_.isEmpty()) {
         if (nonqueue_watchers_.takeFirst() == ticket) {
@@ -895,7 +893,12 @@ void ViewerWidget::RendererGeneratedFrame()
         }
       }
 
-      SetDisplayImage(frame);
+      if (FramePtr frame = ticket->Get().value<FramePtr>()) {
+        SetDisplayImage(frame);
+      } else if (TexturePtr texture = ticket->Get().value<TexturePtr>()) {
+        qDebug() << "Setting texture!";
+        display_widget_->SetTexture(texture);
+      }
     }
   }
 
