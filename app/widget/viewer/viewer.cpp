@@ -896,7 +896,6 @@ void ViewerWidget::RendererGeneratedFrame()
       if (FramePtr frame = ticket->Get().value<FramePtr>()) {
         SetDisplayImage(frame);
       } else if (TexturePtr texture = ticket->Get().value<TexturePtr>()) {
-        qDebug() << "Setting texture!";
         display_widget_->SetTexture(texture);
       }
     }
