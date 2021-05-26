@@ -90,6 +90,8 @@ public slots:
 
   virtual void DownloadFromTexture(olive::Texture* texture, void* data, int linesize) = 0;
 
+  virtual void Flush() = 0;
+
 protected slots:
   virtual void Blit(QVariant shader,
                     olive::ShaderJob job,

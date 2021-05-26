@@ -134,6 +134,12 @@ void RenderProcessor::Run()
     TexturePtr texture = GenerateTexture(time, frame_length);
 
     if (ticket_->property("textureonly").toBool()) {
+      if (!texture) {
+        texture = render_ctx_->CreateTexture(GetCacheVideoParams());
+      }
+
+      render_ctx_->Flush();
+
       ticket_->Finish(QVariant::fromValue(texture));
     } else {
       FramePtr frame = GenerateFrame(texture, time);

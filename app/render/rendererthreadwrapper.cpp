@@ -150,6 +150,11 @@ void RendererThreadWrapper::DownloadFromTexture(Texture *texture, void *data, in
                             Q_ARG(int, linesize));
 }
 
+void RendererThreadWrapper::Flush()
+{
+  QMetaObject::invokeMethod(inner_, "Flush", Qt::BlockingQueuedConnection);
+}
+
 void RendererThreadWrapper::Blit(QVariant shader, ShaderJob job, Texture *destination, VideoParams destination_params, bool clear_destination)
 {
   QMetaObject::invokeMethod(inner_, "Blit", Qt::BlockingQueuedConnection,

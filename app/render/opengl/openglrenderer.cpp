@@ -76,6 +76,9 @@ private:
 
 #define PRINT_GL_ERRORS ErrorPrinter __e(__FUNCTION__, functions_)
 
+#define GL_PREAMBLE \
+  QMutexLocker __l(&global_opengl_mutex);
+
 QMutex global_opengl_mutex;
 
 OpenGLRenderer::OpenGLRenderer(QObject* parent) :
@@ -137,7 +140,7 @@ void OpenGLRenderer::PostDestroy()
 
 void OpenGLRenderer::PostInit()
 {
-  QMutexLocker locker(&global_opengl_mutex);
+  GL_PREAMBLE;
 
   // Make context current on that surface
   if (context_->parent() == this && !context_->makeCurrent(&surface_)) {
@@ -159,7 +162,7 @@ void OpenGLRenderer::PostInit()
 void OpenGLRenderer::DestroyInternal()
 {
   if (context_) {
-    QMutexLocker locker(&global_opengl_mutex);
+    GL_PREAMBLE;
 
     // Delete framebuffer
     functions_->glDeleteFramebuffers(1, &framebuffer_);
@@ -182,14 +185,14 @@ void OpenGLRenderer::DestroyInternal()
 
 void OpenGLRenderer::ClearDestination(double r, double g, double b, double a)
 {
-  QMutexLocker locker(&global_opengl_mutex);
+  GL_PREAMBLE;
 
   ClearDestinationInternal(r, g, b, a);
 }
 
 QVariant OpenGLRenderer::CreateNativeTexture2D(int width, int height, VideoParams::Format format, int channel_count, const void *data, int linesize)
 {
-  QMutexLocker locker(&global_opengl_mutex);
+  GL_PREAMBLE;
 
   GLuint texture = GetCachedTexture(width, height, 1, format, channel_count);
 
@@ -232,7 +235,7 @@ QVariant OpenGLRenderer::CreateNativeTexture2D(int width, int height, VideoParam
 
 QVariant OpenGLRenderer::CreateNativeTexture3D(int width, int height, int depth, VideoParams::Format format, int channel_count, const void *data, int linesize)
 {
-  QMutexLocker locker(&global_opengl_mutex);
+  GL_PREAMBLE;
 
   GLuint texture = GetCachedTexture(width, height, depth, format, channel_count);
 
@@ -301,7 +304,7 @@ void OpenGLRenderer::DestroyNativeTexture(QVariant texture)
 
 QVariant OpenGLRenderer::CreateNativeShader(ShaderCode code)
 {
-  QMutexLocker locker(&global_opengl_mutex);
+  GL_PREAMBLE;
 
   PRINT_GL_ERRORS;
 
@@ -349,16 +352,14 @@ error:
 
 void OpenGLRenderer::DestroyNativeShader(QVariant shader)
 {
-  QMutexLocker locker(&global_opengl_mutex);
+  GL_PREAMBLE;
 
   delete Node::ValueToPtr<QOpenGLShaderProgram>(shader);
 }
 
 void OpenGLRenderer::UploadToTexture(Texture *texture, const void *data, int linesize)
 {
-  QMutexLocker locker(&global_opengl_mutex);
-
-  PRINT_GL_ERRORS;
+  GL_PREAMBLE;
 
   GLuint t = texture->id().value<GLuint>();
   const VideoParams& p = texture->params();
@@ -374,16 +375,20 @@ void OpenGLRenderer::UploadToTexture(Texture *texture, const void *data, int lin
 
   functions_->glPixelStorei(GL_UNPACK_ROW_LENGTH, linesize);
 
-  if (texture->type() == Texture::k2D) {
-    functions_->glTexSubImage2D(tex_type, 0, 0, 0,
-                                p.effective_width(), p.effective_height(),
-                                GetPixelFormat(p.channel_count()), GetPixelType(p.format()),
-                                data);
-  } else {
-    context_->extraFunctions()->glTexSubImage3D(tex_type, 0, 0, 0, 0,
-                                                p.effective_width(), p.effective_height(), p.effective_depth(),
-                                                GetPixelFormat(p.channel_count()), GetPixelType(p.format()),
-                                                data);
+  {
+    PRINT_GL_ERRORS;
+
+    if (texture->type() == Texture::k2D) {
+      functions_->glTexSubImage2D(tex_type, 0, 0, 0,
+                                  p.effective_width(), p.effective_height(),
+                                  GetPixelFormat(p.channel_count()), GetPixelType(p.format()),
+                                  data);
+    } else {
+      context_->extraFunctions()->glTexSubImage3D(tex_type, 0, 0, 0, 0,
+                                                  p.effective_width(), p.effective_height(), p.effective_depth(),
+                                                  GetPixelFormat(p.channel_count()), GetPixelType(p.format()),
+                                                  data);
+    }
   }
 
   functions_->glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
@@ -393,7 +398,7 @@ void OpenGLRenderer::UploadToTexture(Texture *texture, const void *data, int lin
 
 void OpenGLRenderer::DownloadFromTexture(Texture* texture, void *data, int linesize)
 {
-  QMutexLocker locker(&global_opengl_mutex);
+  GL_PREAMBLE;
 
   const VideoParams& p = texture->params();
 
@@ -422,6 +427,13 @@ void OpenGLRenderer::DownloadFromTexture(Texture* texture, void *data, int lines
   functions_->glBindTexture(GL_TEXTURE_2D, current_tex);
 }
 
+void OpenGLRenderer::Flush()
+{
+  GL_PREAMBLE;
+
+  functions_->glFinish();
+}
+
 struct TextureToBind {
   TexturePtr texture;
   Texture::Interpolation interpolation;
@@ -429,7 +441,7 @@ struct TextureToBind {
 
 void OpenGLRenderer::Blit(QVariant s, ShaderJob job, Texture *destination, VideoParams destination_params, bool clear_destination)
 {
-  QMutexLocker locker(&global_opengl_mutex);
+  GL_PREAMBLE;
 
   // If this node is iterative, we'll pick up which input here
   QString iterative_name;
@@ -825,7 +837,7 @@ void OpenGLRenderer::GarbageCollectTextureCache()
   qint64 max_age = QDateTime::currentMSecsSinceEpoch() - kTextureCacheMaxSize;
   for (auto it=texture_cache_.begin(); it!=texture_cache_.end(); ) {
     if (it->age < max_age) {
-      QMutexLocker locker(&global_opengl_mutex);
+      GL_PREAMBLE;
       GLuint t = it->texture;
       texture_params_.remove(t);
       functions_->glDeleteTextures(1, &t);
