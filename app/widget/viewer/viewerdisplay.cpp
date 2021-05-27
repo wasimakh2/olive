@@ -350,6 +350,7 @@ void ViewerDisplayWidget::OnPaint()
       if (FramePtr frame = load_frame_.value<FramePtr>()) {
         // This is a CPU frame, upload it now
         if (!texture_
+            || texture_->renderer() != renderer() // Some implementations don't like it if we upload to a texture created in another (albeit shared) context
             || texture_->width() != frame->width()
             || texture_->height() != frame->height()
             || texture_->format() != frame->format()
