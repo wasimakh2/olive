@@ -277,17 +277,8 @@ QVariant OpenGLRenderer::CreateNativeShader(ShaderCode code)
   QString vert_code = code.vert_code();
   QString frag_code = code.frag_code();
 
-  QString shader_preamble;
-  if (QOpenGLContext::openGLModuleType() == QOpenGLContext::LibGLES) {
-    shader_preamble = QStringLiteral("#version 300 es\n"
-                                     "\n"
-                                     "precision highp int;\n"
-                                     "precision highp float;\n"
-                                     "\n");
-  } else {
-    shader_preamble = QStringLiteral("#version 150\n"
-                                     "\n");
-  }
+  QString shader_preamble = QStringLiteral("#version 110\n"
+                                         "\n");
 
   vert_code.prepend(shader_preamble);
   frag_code.prepend(shader_preamble);
