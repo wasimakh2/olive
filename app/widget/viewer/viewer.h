@@ -128,7 +128,7 @@ signals:
   /**
    * @brief Signal emitted when a new frame is loaded
    */
-  void LoadedBuffer(Frame* load_buffer);
+  void TextureChanged(TexturePtr t);
 
   /**
    * @brief Request a scope panel

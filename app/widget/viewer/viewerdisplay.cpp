@@ -326,7 +326,7 @@ void ViewerDisplayWidget::OnPaint()
 {
   // Clear background to empty
   QColor bg_color = show_widget_background_ ? palette().window().color() : Qt::black;
-  renderer()->ClearDestination(bg_color.redF(), bg_color.greenF(), bg_color.blueF());
+  renderer()->ClearDestination(nullptr, bg_color.redF(), bg_color.greenF(), bg_color.blueF());
 
   // We only draw if we have a pipeline
   if (push_mode_ != kPushNull) {
@@ -363,6 +363,8 @@ void ViewerDisplayWidget::OnPaint()
         // This is a GPU texture, switch to it directly
         texture_ = texture;
       }
+
+      emit TextureChanged(texture_);
 
       push_mode_ = kPushUnnecessary;
 

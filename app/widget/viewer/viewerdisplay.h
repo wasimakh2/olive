@@ -182,6 +182,8 @@ signals:
 
   void VisibilityChanged(bool visible);
 
+  void TextureChanged(TexturePtr texture);
+
 protected:
   /**
    * @brief Override the mouse press event for the DragStarted() signal and gizmos
