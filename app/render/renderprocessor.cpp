@@ -133,7 +133,20 @@ void RenderProcessor::Run()
 
     TexturePtr texture = GenerateTexture(time, frame_length);
 
+    if (GetCacheVideoParams().interlacing() != VideoParams::kInterlaceNone) {
+      // Get next between frame and interlace it
+      TexturePtr top = texture;
+      TexturePtr bottom = GenerateTexture(time + frame_length, frame_length);
+
+      if (GetCacheVideoParams().interlacing() == VideoParams::kInterlacedBottomFirst) {
+        std::swap(top, bottom);
+      }
+
+      texture = render_ctx_->InterlaceTexture(top, bottom, GetCacheVideoParams());
+    }
+
     if (ticket_->property("textureonly").toBool()) {
+      // Return GPU texture
       if (!texture) {
         texture = render_ctx_->CreateTexture(GetCacheVideoParams());
       }
@@ -142,23 +155,8 @@ void RenderProcessor::Run()
 
       ticket_->Finish(QVariant::fromValue(texture));
     } else {
+      // Convert to CPU frame
       FramePtr frame = GenerateFrame(texture, time);
-
-      /*if (GetCacheVideoParams().interlacing() != VideoParams::kInterlaceNone) {
-        // Get next between frame and interlace it
-        FramePtr next_frame = GenerateFrame(time + frame_length, frame_length);
-
-        FramePtr top, bottom;
-        if (GetCacheVideoParams().interlacing() == VideoParams::kInterlacedTopFirst) {
-          top = frame;
-          bottom = next_frame;
-        } else {
-          top = next_frame;
-          bottom = frame;
-        }
-
-        frame = Frame::Interlace(top, bottom);
-      }*/
 
       ticket_->Finish(QVariant::fromValue(frame));
     }

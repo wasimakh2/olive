@@ -20,6 +20,8 @@
 
 #include "renderer.h"
 
+#include <QVector2D>
+
 #include "common/ocioutils.h"
 
 namespace olive {
@@ -60,9 +62,34 @@ void Renderer::BlitColorManaged(ColorProcessorPtr color_processor, TexturePtr so
   BlitColorManagedInternal(color_processor, source, source_is_premultiplied, nullptr, params, clear_destination, matrix, crop_matrix);
 }
 
+TexturePtr Renderer::InterlaceTexture(TexturePtr top, TexturePtr bottom, const VideoParams &params)
+{
+  color_cache_mutex_.lock();
+  if (interlace_texture_.isNull()) {
+    interlace_texture_ = CreateNativeShader(ShaderCode(FileFunctions::ReadFileAsString(QStringLiteral(":/shaders/interlace.frag"))));
+  }
+  color_cache_mutex_.unlock();
+
+  ShaderJob job;
+  job.InsertValue(QStringLiteral("top_tex_in"), NodeValue(NodeValue::kTexture, QVariant::fromValue(top)));
+  job.InsertValue(QStringLiteral("bottom_tex_in"), NodeValue(NodeValue::kTexture, QVariant::fromValue(bottom)));
+  job.InsertValue(QStringLiteral("resolution_in"), NodeValue(NodeValue::kVec2, QVector2D(params.effective_width(), params.effective_height())));
+
+  TexturePtr output = CreateTexture(params);
+
+  BlitToTexture(interlace_texture_, job, output.get());
+
+  return output;
+}
+
 void Renderer::Destroy()
 {
   color_cache_.clear();
+
+  if (!interlace_texture_.isNull()) {
+    DestroyNativeShader(interlace_texture_);
+    interlace_texture_.clear();
+  }
 
   DestroyInternal();
 }

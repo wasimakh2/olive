@@ -66,6 +66,8 @@ public:
   void BlitColorManaged(ColorProcessorPtr color_processor, TexturePtr source, bool source_is_premultiplied, Texture* destination, bool clear_destination = true, const QMatrix4x4& matrix = QMatrix4x4(), const QMatrix4x4 &crop_matrix = QMatrix4x4());
   void BlitColorManaged(ColorProcessorPtr color_processor, TexturePtr source, bool source_is_premultiplied, VideoParams params, bool clear_destination = true, const QMatrix4x4& matrix = QMatrix4x4(), const QMatrix4x4 &crop_matrix = QMatrix4x4());
 
+  TexturePtr InterlaceTexture(TexturePtr top, TexturePtr bottom, const VideoParams &params);
+
   void Destroy();
 
   virtual void PostDestroy() = 0;
@@ -132,6 +134,8 @@ private:
   QHash<QString, ColorContext> color_cache_;
 
   QMutex color_cache_mutex_;
+
+  QVariant interlace_texture_;
 
 };
 
