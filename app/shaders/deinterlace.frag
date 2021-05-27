@@ -4,6 +4,11 @@ uniform vec2 resolution_in;
 
 varying vec2 ove_texcoord;
 
+float round(float x)
+{
+  return floor(x + 0.5);
+}
+
 void main() {
     vec2 using_texcoord = ove_texcoord;
 
