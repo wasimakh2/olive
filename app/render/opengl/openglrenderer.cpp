@@ -183,11 +183,19 @@ void OpenGLRenderer::DestroyInternal()
   cache_timer_.stop();
 }
 
-void OpenGLRenderer::ClearDestination(double r, double g, double b, double a)
+void OpenGLRenderer::ClearDestination(Texture *texture, double r, double g, double b, double a)
 {
   GL_PREAMBLE;
 
+  if (texture) {
+    AttachTextureAsDestination(texture);
+  }
+
   ClearDestinationInternal(r, g, b, a);
+
+  if (texture) {
+    DetachTextureAsDestination();
+  }
 }
 
 QVariant OpenGLRenderer::CreateNativeTexture2D(int width, int height, VideoParams::Format format, int channel_count, const void *data, int linesize)

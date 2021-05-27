@@ -69,9 +69,10 @@ void RendererThreadWrapper::DestroyInternal()
   }
 }
 
-void RendererThreadWrapper::ClearDestination(double r, double g, double b, double a)
+void RendererThreadWrapper::ClearDestination(Texture *texture, double r, double g, double b, double a)
 {
   QMetaObject::invokeMethod(inner_, "ClearDestination", Qt::BlockingQueuedConnection,
+                            OLIVE_NS_ARG(Texture*, texture),
                             Q_ARG(double, r),
                             Q_ARG(double, g),
                             Q_ARG(double, b),
