@@ -580,15 +580,13 @@ void ViewerDisplayWidget::EmitColorAtCursor(QMouseEvent *e)
   if (signal_cursor_color_) {
     Color reference, display;
 
-    /*if (last_loaded_buffer_) {
+    if (texture_) {
       QPointF pixel_pos = GenerateGizmoTransform().inverted().map(e->pos());
+      pixel_pos /= texture_->params().divider();
 
-      pixel_pos /= last_loaded_buffer_->video_params().divider();
-
-      reference = last_loaded_buffer_->get_pixel(qRound(pixel_pos.x()), qRound(pixel_pos.y()));
+      reference = renderer()->GetPixelFromTexture(texture_.get(), pixel_pos);
       display = color_service()->ConvertColor(reference);
-    }*/
-    qDebug() << "Pixel sampling is a stub!";
+    }
 
     emit CursorColor(reference, display);
   }

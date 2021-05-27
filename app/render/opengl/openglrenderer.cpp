@@ -378,7 +378,7 @@ void OpenGLRenderer::DownloadFromTexture(Texture* texture, void *data, int lines
                              0,
                              p.effective_width(),
                              p.effective_height(),
-                             (QOpenGLContext::openGLModuleType() == QOpenGLContext::LibGLES) ? GL_RGBA : GetPixelFormat(p.channel_count()),
+                             GetPixelFormat(p.channel_count()),
                              GetPixelType(p.format()),
                              data);
   }
@@ -395,6 +395,26 @@ void OpenGLRenderer::Flush()
   GL_PREAMBLE;
 
   functions_->glFinish();
+}
+
+Color OpenGLRenderer::GetPixelFromTexture(Texture *texture, const QPointF &pt)
+{
+  AttachTextureAsDestination(texture);
+
+  QByteArray data(VideoParams::GetBytesPerPixel(texture->format(), texture->channel_count()), Qt::Uninitialized);
+
+  functions_->glReadPixels(pt.x(), pt.y(), 1, 1, GetPixelFormat(texture->channel_count()), GetPixelType(texture->format()), data.data());
+
+  Color c = Color::fromData(data.data(), texture->format(), texture->channel_count());
+
+  if (texture->channel_count() == VideoParams::kRGBChannelCount) {
+    // No alpha channel, set to 1.0
+    c.set_alpha(1.0);
+  }
+
+  DetachTextureAsDestination();
+
+  return c;
 }
 
 struct TextureToBind {

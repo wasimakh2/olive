@@ -156,6 +156,18 @@ void RendererThreadWrapper::Flush()
   QMetaObject::invokeMethod(inner_, "Flush", Qt::BlockingQueuedConnection);
 }
 
+Color RendererThreadWrapper::GetPixelFromTexture(Texture *texture, const QPointF &pt)
+{
+  Color c;
+
+  QMetaObject::invokeMethod(inner_, "GetPixelFromTexture", Qt::BlockingQueuedConnection,
+                            OLIVE_NS_RETURN_ARG(Color, c),
+                            OLIVE_NS_ARG(Texture*, texture),
+                            Q_ARG(QPointF, pt));
+
+  return c;
+}
+
 void RendererThreadWrapper::Blit(QVariant shader, ShaderJob job, Texture *destination, VideoParams destination_params, bool clear_destination)
 {
   QMetaObject::invokeMethod(inner_, "Blit", Qt::BlockingQueuedConnection,

@@ -69,6 +69,8 @@ public slots:
 
   virtual void Flush() override;
 
+  virtual Color GetPixelFromTexture(olive::Texture *texture, const QPointF &pt) override;
+
 protected slots:
   virtual void Blit(QVariant shader,
                     olive::ShaderJob job,
