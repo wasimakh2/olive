@@ -99,6 +99,9 @@ protected slots:
                     olive::VideoParams destination_params,
                     bool clear_destination) = 0;
 
+protected:
+  TexturePtr CreateTextureFromNativeHandle(const QVariant &v, const VideoParams &params, Texture::Type type = Texture::k2D);
+
 private:
   struct ColorContext {
     struct LUT {

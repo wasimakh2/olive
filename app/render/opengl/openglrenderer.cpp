@@ -194,43 +194,7 @@ QVariant OpenGLRenderer::CreateNativeTexture2D(int width, int height, VideoParam
 {
   GL_PREAMBLE;
 
-  GLuint texture = GetCachedTexture(width, height, 1, format, channel_count);
-
-  // If no texture in cache, generate new texture
-  bool new_tex = (texture == 0);
-  if (new_tex) {
-    functions_->glGenTextures(1, &texture);
-    texture_params_.insert(texture, {width, height, 1, format, channel_count});
-  }
-
-  if (new_tex || data) {
-    functions_->glPixelStorei(GL_UNPACK_ROW_LENGTH, linesize);
-
-    GLint current_tex;
-    functions_->glGetIntegerv(GL_TEXTURE_BINDING_2D, &current_tex);
-
-    functions_->glBindTexture(GL_TEXTURE_2D, texture);
-
-    {
-      PRINT_GL_ERRORS;
-      if (new_tex) {
-        functions_->glTexImage2D(GL_TEXTURE_2D, 0, GetInternalFormat(format, channel_count),
-                                 width, height, 0, GetPixelFormat(channel_count),
-                                 GetPixelType(format), data);
-      } else {
-        functions_->glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
-                                    width, height,
-                                    GetPixelFormat(channel_count), GetPixelType(format),
-                                    data);
-      }
-    }
-
-    functions_->glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-
-    functions_->glBindTexture(GL_TEXTURE_2D, current_tex);
-  }
-
-  return texture;
+  return CreateNativeTexture2DInternal(width, height, format, channel_count, data, linesize);
 }
 
 QVariant OpenGLRenderer::CreateNativeTexture3D(int width, int height, int depth, VideoParams::Format format, int channel_count, const void *data, int linesize)
@@ -617,11 +581,11 @@ void OpenGLRenderer::Blit(QVariant s, ShaderJob job, Texture *destination, Video
   TexturePtr output_tex, input_tex;
   if (real_iteration_count > 1) {
     // Create one texture to bounce off
-    output_tex = CreateTexture(destination_params);
+    output_tex = CreateTextureFromNativeHandle(CreateNativeTexture2DInternal(destination_params), destination_params);
 
     if (real_iteration_count > 2) {
       // Create a second texture bounce off
-      input_tex = CreateTexture(destination_params);
+      input_tex = CreateTextureFromNativeHandle(CreateNativeTexture2DInternal(destination_params), destination_params);
     }
   }
 
@@ -811,6 +775,52 @@ void OpenGLRenderer::ClearDestinationInternal(double r, double g, double b, doub
 {
   functions_->glClearColor(r, g, b, a);
   functions_->glClear(GL_COLOR_BUFFER_BIT);
+}
+
+QVariant OpenGLRenderer::CreateNativeTexture2DInternal(int width, int height, VideoParams::Format format, int channel_count, const void *data, int linesize)
+{
+  GLuint texture = GetCachedTexture(width, height, 1, format, channel_count);
+
+  // If no texture in cache, generate new texture
+  bool new_tex = (texture == 0);
+  if (new_tex) {
+    functions_->glGenTextures(1, &texture);
+    texture_params_.insert(texture, {width, height, 1, format, channel_count});
+  }
+
+  if (new_tex || data) {
+    functions_->glPixelStorei(GL_UNPACK_ROW_LENGTH, linesize);
+
+    GLint current_tex;
+    functions_->glGetIntegerv(GL_TEXTURE_BINDING_2D, &current_tex);
+
+    functions_->glBindTexture(GL_TEXTURE_2D, texture);
+
+    {
+      PRINT_GL_ERRORS;
+      if (new_tex) {
+        functions_->glTexImage2D(GL_TEXTURE_2D, 0, GetInternalFormat(format, channel_count),
+                                 width, height, 0, GetPixelFormat(channel_count),
+                                 GetPixelType(format), data);
+      } else {
+        functions_->glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0,
+                                    width, height,
+                                    GetPixelFormat(channel_count), GetPixelType(format),
+                                    data);
+      }
+    }
+
+    functions_->glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+
+    functions_->glBindTexture(GL_TEXTURE_2D, current_tex);
+  }
+
+  return texture;
+}
+
+QVariant OpenGLRenderer::CreateNativeTexture2DInternal(const VideoParams &params, const void *data, int linesize)
+{
+  return CreateNativeTexture2DInternal(params.effective_width(), params.effective_height(), params.format(), params.channel_count(), data, linesize);
 }
 
 GLuint OpenGLRenderer::GetCachedTexture(int width, int height, int depth, VideoParams::Format format, int channel_count)

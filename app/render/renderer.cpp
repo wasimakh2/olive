@@ -42,11 +42,7 @@ TexturePtr Renderer::CreateTexture(const VideoParams &params, Texture::Type type
                               params.channel_count(), data, linesize);
   }
 
-  if (v.isNull()) {
-    return nullptr;
-  }
-
-  return std::make_shared<Texture>(this, v, params, type);
+  return CreateTextureFromNativeHandle(v, params, type);
 }
 
 TexturePtr Renderer::CreateTexture(const VideoParams &params, const void *data, int linesize)
@@ -69,6 +65,15 @@ void Renderer::Destroy()
   color_cache_.clear();
 
   DestroyInternal();
+}
+
+TexturePtr Renderer::CreateTextureFromNativeHandle(const QVariant &v, const VideoParams &params, Texture::Type type)
+{
+  if (v.isNull()) {
+    return nullptr;
+  }
+
+  return std::make_shared<Texture>(this, v, params, type);
 }
 
 bool Renderer::GetColorContext(ColorProcessorPtr color_processor, Renderer::ColorContext *ctx)

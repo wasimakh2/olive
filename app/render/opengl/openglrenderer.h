@@ -91,6 +91,9 @@ private:
 
   void ClearDestinationInternal(double r = 0.0, double g = 0.0, double b = 0.0, double a = 0.0);
 
+  QVariant CreateNativeTexture2DInternal(int width, int height, olive::VideoParams::Format format, int channel_count, const void* data = nullptr, int linesize = 0);
+  QVariant CreateNativeTexture2DInternal(const VideoParams &params, const void* data = nullptr, int linesize = 0);
+
   GLuint GetCachedTexture(int width, int height, int depth, VideoParams::Format format, int channel_count);
 
   QTimer cache_timer_;
